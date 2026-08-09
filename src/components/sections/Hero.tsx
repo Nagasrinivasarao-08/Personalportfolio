@@ -3,13 +3,14 @@
 import React, { useRef, useEffect, useState } from "react";
 import { personalData } from "@/data/personal";
 import { motion } from "framer-motion";
-import { Volume2 } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
 export const Hero: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     AOS.init({
@@ -18,54 +19,59 @@ export const Hero: React.FC = () => {
       easing: "ease-out",
     });
 
-    const startAutomaticUnmutedPlay = () => {
-      if (videoRef.current) {
+    // Handle user interaction to enable unmuted playback seamlessly
+    const handleFirstUserInteraction = () => {
+      if (videoRef.current && videoRef.current.muted) {
         videoRef.current.muted = false;
         videoRef.current.volume = 1.0;
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsPlaying(true);
-            })
-            .catch((err) => {
-              console.warn("Autoplay attempt:", err);
-            });
-        }
+        videoRef.current
+          .play()
+          .then(() => {
+            setIsMuted(false);
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.warn("Unmute on interaction failed:", err);
+          });
       }
+      // Remove listeners once triggered
+      window.removeEventListener("click", handleFirstUserInteraction);
+      window.removeEventListener("keydown", handleFirstUserInteraction);
+      window.removeEventListener("touchstart", handleFirstUserInteraction);
     };
 
-    // Execute immediately as soon as page opens
-    startAutomaticUnmutedPlay();
-
-    // Staggered retries on page open
-    const timers = [100, 300, 500, 1000, 2000].map((delay) =>
-      setTimeout(startAutomaticUnmutedPlay, delay)
-    );
+    window.addEventListener("click", handleFirstUserInteraction, { once: true });
+    window.addEventListener("keydown", handleFirstUserInteraction, { once: true });
+    window.addEventListener("touchstart", handleFirstUserInteraction, { once: true });
 
     return () => {
-      timers.forEach(clearTimeout);
+      window.removeEventListener("click", handleFirstUserInteraction);
+      window.removeEventListener("keydown", handleFirstUserInteraction);
+      window.removeEventListener("touchstart", handleFirstUserInteraction);
     };
   }, []);
 
+  const toggleSound = () => {
+    if (videoRef.current) {
+      const nextMuted = !videoRef.current.muted;
+      videoRef.current.muted = nextMuted;
+      videoRef.current.volume = 1.0;
+      if (!nextMuted) {
+        videoRef.current.play().catch(() => {});
+      }
+      setIsMuted(nextMuted);
+    }
+  };
+
   return (
     <section id="hero" className="relative w-full h-screen overflow-hidden bg-black">
-      {/* Full-screen Background Video — Automatically Plays Unmuted On Page Open */}
+      {/* Full-screen Background Video — Autoplays muted, unmutes on user interaction */}
       <video
         ref={videoRef}
         autoPlay
         loop
+        muted={isMuted}
         playsInline
-        onCanPlay={(e) => {
-          e.currentTarget.muted = false;
-          e.currentTarget.volume = 1.0;
-          e.currentTarget.play()?.catch(() => {});
-        }}
-        onLoadedData={(e) => {
-          e.currentTarget.muted = false;
-          e.currentTarget.volume = 1.0;
-          e.currentTarget.play()?.catch(() => {});
-        }}
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
       >
         <source src="/hero-video.mp4" type="video/mp4" />
@@ -190,11 +196,27 @@ export const Hero: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Sound Status Indicator */}
-      <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/60 border border-white/20 text-white text-xs font-mono backdrop-blur-md shadow-xl select-none">
-        <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
-        <span className="text-emerald-300 font-semibold">Sound On</span>
-      </div>
+      {/* Floating Sound Status Toggle Button */}
+      <button
+        onClick={toggleSound}
+        type="button"
+        aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+        className="absolute bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/70 hover:bg-black/90 border border-white/20 hover:border-white/40 text-white text-xs font-mono backdrop-blur-md shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer group select-none"
+      >
+        {isMuted ? (
+          <>
+            <VolumeX className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+            <span className="text-white/90 font-medium">
+              Sound Off <span className="opacity-70 text-[10px] hidden sm:inline">(Click to Enable)</span>
+            </span>
+          </>
+        ) : (
+          <>
+            <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse group-hover:scale-110 transition-transform" />
+            <span className="text-emerald-300 font-semibold">Sound On</span>
+          </>
+        )}
+      </button>
     </section>
   );
 };
