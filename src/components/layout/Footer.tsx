@@ -26,9 +26,9 @@ export const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* Middle Huge Name */}
-      <div className="w-full flex justify-center items-center py-20 md:py-24 overflow-hidden">
-        <h2 className="text-[13vw] md:text-[12vw] leading-none font-sans font-bold tracking-tighter uppercase select-none text-[#f4f4f4] w-full text-center">
+      {/* Middle Name */}
+      <div className="w-full flex justify-center items-center py-16 md:py-20 overflow-hidden px-4">
+        <h2 className="text-[7vw] sm:text-[6vw] md:text-[5.5vw] lg:text-[5vw] leading-none font-sans font-black tracking-tight uppercase select-none text-[#f4f4f4] w-full text-center max-w-full">
           {personalData.name.split(" ")[0]}
         </h2>
       </div>

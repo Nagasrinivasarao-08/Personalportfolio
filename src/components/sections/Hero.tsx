@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { personalData } from "@/data/personal";
 import { motion } from "framer-motion";
+import { Volume2 } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
 export const Hero: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     AOS.init({
@@ -16,24 +18,54 @@ export const Hero: React.FC = () => {
       easing: "ease-out",
     });
 
-    // Ensure background video plays cleanly in muted loop
-    if (videoRef.current) {
-      videoRef.current.muted = true;
-      videoRef.current.play()?.catch(() => {
-        // Ignore autoplay policy restrictions
-      });
-    }
+    const startAutomaticUnmutedPlay = () => {
+      if (videoRef.current) {
+        videoRef.current.muted = false;
+        videoRef.current.volume = 1.0;
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch((err) => {
+              console.warn("Autoplay attempt:", err);
+            });
+        }
+      }
+    };
+
+    // Execute immediately as soon as page opens
+    startAutomaticUnmutedPlay();
+
+    // Staggered retries on page open
+    const timers = [100, 300, 500, 1000, 2000].map((delay) =>
+      setTimeout(startAutomaticUnmutedPlay, delay)
+    );
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
   }, []);
 
   return (
     <section id="hero" className="relative w-full h-screen overflow-hidden bg-black">
-      {/* Full-screen Background Video */}
+      {/* Full-screen Background Video — Automatically Plays Unmuted On Page Open */}
       <video
         ref={videoRef}
         autoPlay
         loop
-        muted
         playsInline
+        onCanPlay={(e) => {
+          e.currentTarget.muted = false;
+          e.currentTarget.volume = 1.0;
+          e.currentTarget.play()?.catch(() => {});
+        }}
+        onLoadedData={(e) => {
+          e.currentTarget.muted = false;
+          e.currentTarget.volume = 1.0;
+          e.currentTarget.play()?.catch(() => {});
+        }}
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
       >
         <source src="/hero-video.mp4" type="video/mp4" />
@@ -156,6 +188,12 @@ export const Hero: React.FC = () => {
             <path d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </div>
+      </div>
+
+      {/* Floating Sound Status Indicator */}
+      <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/60 border border-white/20 text-white text-xs font-mono backdrop-blur-md shadow-xl select-none">
+        <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+        <span className="text-emerald-300 font-semibold">Sound On</span>
       </div>
     </section>
   );
